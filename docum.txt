@@ -1,0 +1,15 @@
+MESG: message a single client
+BCST: broadcast message
+ONLN: ask server who is online
+BLCK: block user
+UNBL: unblock user
+LOGT: logout
+GETA: get IP address for P2P communication
+LIVE: Heartbeat routine
+
+AUOK: Authentication OK
+ANOK: Authentication failure
+ABLK: Authentication blocked
+
+BLOCKED: list of [IP,timestamp] pairs
+ONLINE: list of [IP,name,timestamp]

@@ -4,6 +4,7 @@
 
 import argparse
 import socket
+import time
 from threading import Thread
 
 # Configuration variables
@@ -38,15 +39,41 @@ while True:
     user = raw_input('Username: ')
     pwd = raw_input('Password: ')
     message = "AUTH " + user + " " + pwd
+    try:
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect((args.ip, port))
+    except:
+        print "Error connecting to the remote server. Is it running? Are the IP and port you provided correct?"
+        exit(1)
+    client.send(message)
+    resp = client.recv(BUFSIZE)
+    if resp == "AUOK":
+        print "Welcome to simple chat server!"
+        client.close()
+        break
+    elif resp == "ANOK":
+        print "Invalid password. Please try again"
+        client.close()
+    elif resp == "ABLK":
+        print "Too many authentication failures. You have been blocked. Try again after some time"
+        client.close()
+        exit(1)
+
+
+def private(data):
+    print "Placeholder: " + data
+
+
+def send(data):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         client.connect((args.ip, port))
-        client.send(message)
-        resp = client.recv(BUFSIZE)
+        client.send(data)
     except:
-        print "Error connecting to the remote server. Is it running? Are the IP and port you provided correct?"
-        client.close()
+        print "Error connecting to the remote server. Guess it went offline"
         exit(1)
+    client.close()
+
 
 def serverthread(serversock):
     message = serversock.recv(BUFSIZE)
@@ -63,26 +90,23 @@ def server():
         servthread.start()
 
 
-clientservthread = Thread(target=server, args=())
+clientservthread = Thread(target=server)
 clientservthread.start()
 
 
-def private(data):
-    print "Placeholder: " + data
+def heartbeat():
+    while True:
+        time.sleep(5)
+        send("LIVE")
 
-def send(data):
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        client.connect((args.ip, port))
-        client.send(data)
-    except:
-        print "Error connecting to the remote server. Guess it went offline"
-        client.close()
-        exit(1)
+
+heartbeatthread = Thread(target=heartbeat)
+heartbeatthread.start()
+
 
 while True:
     text = raw_input('> ')
-    command = text.split(' ',1)
+    command = text.split(' ', 1)
     print command[0]
 
     if command[0] == "message":
@@ -106,8 +130,4 @@ while True:
         print "I could not understand the command you gave me. Valid commands are:"
         print "message, broadcast, online, (un)block, logout, getaddress, private"
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect((args.ip, port))
-client.send(message)
-client.close()
 
