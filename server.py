@@ -4,7 +4,7 @@
 
 import argparse
 import socket
-from threading import thread
+from threading import Thread
 
 # Configuration variables
 TIMEOUT = 60
@@ -37,6 +37,6 @@ def server(host, port):
     server.listen(5)
     while True:
         serversock, serveraddr = server.accept( )
-        thread.start_new_thread(serverthread, (serversock,))
+        Thread.start_new_thread(serverthread, (serversock,))
 
-thread(target=server).start()
+Thread(target=server).start()
