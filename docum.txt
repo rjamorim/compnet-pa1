@@ -14,3 +14,4 @@ ABLK: Authentication blocked
 BLOCKED: list of [IP,timestamp] pairs
 ONLINE: list of [IP,name,timestamp] lists
 BLACKLIST: list of [name,name] pairs. 1st value is who blocked, 2nd is who got blocked
+OUTBOX: list of [name,message] pairs

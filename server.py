@@ -14,6 +14,7 @@ BLOCK_TIME = 600  # 10 minutes
 BLOCKED = []  # IPs blocked for too many authentication failures
 ONLINE = []  # List of connected clients
 BLACKLIST = []  # List of clients that blocked other clients
+OUTBOX = []  # Messages waiting for their owners to connect, so that they can be delivered
 
 
 # Here I take care of the command line arguments
@@ -47,8 +48,16 @@ def nametoip(name):
             return entry[0]
 
 
+# Checks if an user is online
+def isonline(name):
+    for entry in ONLINE:
+        if entry[1] == name:
+            return True
+    return False
+
+
 # Checks if an user is valid - that is, he is in the credentials file
-def validateuser(name):
+def isvaliduser(name):
     try:
         for line in open('credentials.txt','r').readlines():
             entry = line.split(' ')
@@ -58,6 +67,20 @@ def validateuser(name):
     except IOError:
         print "Credentials file can not be read! Something is very wrong. Exiting..."
         exit (1)
+
+
+# Here we check the outbox to see of the user that just logged doesn't have any messages waiting
+def processoutbox(name):
+    addressee = (nametoip(name),2663)
+    flag = False
+    for entry in OUTBOX:
+        if entry[0] == name:
+            flag = True
+            send(addressee, entry[1])
+    if flag:
+        for entry in OUTBOX:
+            if entry[0] == name:
+                OUTBOX.pop(OUTBOX.index(entry))
 
 
 # Checks if a client asking to authenticate is blocked.
@@ -89,18 +112,15 @@ def auth(clientsock, clientaddr, data):
             entry = line.split(' ')
             if entry[0] == values[0]:
                 if entry[1] == values[1]:
-                    print "User authenticated!"
                     clientsock.send("AUOK")
                     ONLINE.append([clientaddr[0],entry[0],int(time.time())])
-                    ### HERE WE MUST RETRIEVE MESSAGES THAT WERE LEFT OFFLINE AND SEND THEM TO USER
+                    processoutbox(entry[0])
                     return 0
         # If the code arrived here, means authentication failed
         if tries < 2:
-            print "Wrong password!"
             clientsock.send("ANOK")
             BLOCKED.insert(0,[clientaddr[0],int(time.time())])
         else:
-            print "Wrong password - Blocked!"
             clientsock.send("ABLK")
             BLOCKED.insert(0,[clientaddr[0],int(time.time())])
     except IOError:
@@ -108,17 +128,17 @@ def auth(clientsock, clientaddr, data):
         exit (1)
 
 
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def send(clientaddr, data):
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         client.connect((clientaddr[0], 2663))
         client.send(data)
     except:
-        print "Error connecting to the remote server. Guess it went offline"
-        exit(1)
+        print "Error connecting to the remote client. Guess it went offline"
     client.close()
 
 
+# Refreshes ONLINE list when a client sends a heartbeat
 def heartbeat(clientaddr):
     for entry in ONLINE:
         if entry[0] == clientaddr[0]:
@@ -131,7 +151,7 @@ def block(clientaddr, data):
     if client == data:
         send(clientaddr, "ERROR: Are you really trying to block yourself??")
         return 0
-    if validateuser(data):
+    if isvaliduser(data):
         for entry in BLACKLIST:
             if entry[0] == client:
                 if entry[1] == data:
@@ -166,6 +186,39 @@ def isblocking(clientaddr, addressee):
     return False
 
 
+# Sends a message to a single client
+def message(clientaddr, data):
+    data = data.split(' ', 1)
+    if not isvaliduser(data[0]):
+        send(clientaddr, "ERROR: the user you are sending the message to does not exist")
+        return 0
+    if isblocking(clientaddr, data[0]):
+        send(clientaddr, "ERROR: the user " + data[0] + " is blocking you")
+        return 0
+    if isonline(data[0]):
+        msg = "MSG FROM " + iptoname(clientaddr) + ": " + data[1]
+        addressee = (nametoip(data[0]), 2663)
+        send(addressee, msg)
+        send(clientaddr, "Message successfully sent")
+        print "Sent " + msg
+    else:
+        msg = "OFFLINE MSG FROM " + iptoname(clientaddr) + ": " + data[1]
+        OUTBOX.append([data[0], msg])
+        send(clientaddr, "Message stored for delivery when " + data[0] + " comes back online")
+
+
+# Sends a broadcast message
+def broadcast(clientaddr, data):
+    count = 0
+    for entry in ONLINE:
+        if not isblocking(clientaddr, entry[1]):
+            msg = "BCAST MSG FROM " + iptoname(clientaddr) + ": " + data
+            addressee = (entry[0], 2663)
+            send(addressee, msg)
+            count += 1
+    send(clientaddr, "Message delivered to " + count + " online users")
+
+
 def serverthread(clientsock, clientaddr):
     receive = clientsock.recv(BUFSIZE)
     command = receive.split(' ', 1)
@@ -174,11 +227,9 @@ def serverthread(clientsock, clientaddr):
     elif command[0] == "LIVE":
         heartbeat(clientaddr)
     elif command[0] == "MESG":
-        print "bogus"
-        #message(clientaddr, command[1])
+        message(clientaddr, command[1])
     elif command[0] == "BCST":
-        print "bogus"
-        #broadcast(clientaddr, command[1])
+        broadcast(clientaddr, command[1])
     elif command[0] == "ONLN":
         print "bogus"
         #online(clientaddr)
@@ -202,6 +253,17 @@ def server():
         clientsock, clientaddr = serversocket.accept()
         clientthread = Thread(target=serverthread, args=(clientsock, clientaddr))
         clientthread.start()
-
-clientservthread = Thread(target=server, args=())
+clientservthread = Thread(target=server)
 clientservthread.start()
+
+
+# Thread that removes clients that haven't been sending heartbeats from the online list. Runs once every 15s
+def idlecleanup():
+    while True:
+        time.sleep(15)
+        for entry in ONLINE:
+            if entry[2] < (time.time() - BLOCK_TIME):
+                ONLINE.pop(ONLINE.index(entry))
+                print "Removed idle client " + entry[1]
+cleanupthread = Thread(target=idlecleanup)
+cleanupthread.start()

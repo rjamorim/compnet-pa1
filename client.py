@@ -77,7 +77,7 @@ def send(data):
 
 def serverthread(serversock):
     message = serversock.recv(BUFSIZE)
-    print("> " + message + "\n> "),
+    print("> " + message + " <\n> "),
 
 
 def server():
@@ -101,6 +101,7 @@ heartbeatthread.start()
 
 while True:
     text = raw_input('> ')
+    text = text.lstrip()
     command = text.split(' ', 1)
 
     if command[0] == "message":
@@ -120,6 +121,8 @@ while True:
         send("GETA " + command[1])
     elif command[0] == "private":
         private(command[1])
+    elif not command[0]:
+        continue
     else:
         print "I could not understand the command you gave me. Valid commands are:"
         print "message, broadcast, online, (un)block, logout, getaddress, private"
