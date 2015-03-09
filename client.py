@@ -5,6 +5,7 @@
 import argparse
 import socket
 import time
+import signal
 from threading import Thread
 
 # Configuration variables
@@ -80,9 +81,9 @@ def serverthread(serversock):
     print("> " + message + " <\n> "),
 
 
+clientserv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def server():
-    clientserv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     # listen on TCP/IP socket
-    clientserv.bind(("localhost", 2663))                 # serve clients in threads
+    clientserv.bind(("localhost", 2663))
     clientserv.listen(5)
     while True:
         serversock, serveraddr = clientserv.accept()
@@ -99,8 +100,16 @@ def heartbeat():
 heartbeatthread = Thread(target=heartbeat)
 heartbeatthread.start()
 
+def cleanandexit():
+    clientserv.close()
+    exit(0)
+
 while True:
-    text = raw_input('> ')
+    try:
+        text = raw_input('> ')
+    except KeyboardInterrupt:
+        print "caught interrupt"
+        cleanandexit
     text = text.lstrip()
     command = text.split(' ', 1)
 
@@ -116,7 +125,8 @@ while True:
         send("UNBL " + command[1])
     elif command[0] == "logout":
         send("LOGT")
-        exit(0)
+        time.sleep(2)
+        cleanandexit
     elif command[0] == "getaddress":
         send("GETA " + command[1])
     elif command[0] == "private":

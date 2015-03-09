@@ -5,6 +5,7 @@
 import argparse
 import socket
 import time
+import signal
 from threading import Thread
 
 # Configuration variables
@@ -69,7 +70,7 @@ def isvaliduser(name):
         exit (1)
 
 
-# Here we check the outbox to see of the user that just logged doesn't have any messages waiting
+# Here we check the outbox to see of the user that just logged in doesn't have any messages waiting
 def processoutbox(name):
     addressee = (nametoip(name),2663)
     flag = False
@@ -219,6 +220,22 @@ def broadcast(clientaddr, data):
     send(clientaddr, "Message delivered to " + count + " online users")
 
 
+# Returns the list of online users
+def online(clientaddr):
+    msg = "Currently online users:"
+    for entry in ONLINE:
+        msg = msg + "\n" + entry[1]
+    send(clientaddr, msg)
+
+
+# User logs out: gets removed from online list
+def logout(clientaddr):
+    for entry in ONLINE:
+        if entry[0] == clientaddr[0]:
+            ONLINE.pop(ONLINE.index(entry))
+    send(clientaddr, "You were successfully logged out")
+
+
 def serverthread(clientsock, clientaddr):
     receive = clientsock.recv(BUFSIZE)
     command = receive.split(' ', 1)
@@ -231,18 +248,21 @@ def serverthread(clientsock, clientaddr):
     elif command[0] == "BCST":
         broadcast(clientaddr, command[1])
     elif command[0] == "ONLN":
-        print "bogus"
-        #online(clientaddr)
+        online(clientaddr)
     elif command[0] == "BLCK":
         block(clientaddr, command[1])
     elif command[0] == "UNBL":
         unblock(clientaddr, command[1])
     elif command[0] == "LOGT":
-        print "bogus"
-        #logout(clientaddr)
+        logout(clientaddr)
     elif command[0] == "GETA":
         print "bogus"
         #getaddress(clientaddr, command[1])
+
+
+#def signal_handler(signum, frame):
+#    print("custom interrupt handler called.")
+#signal.signal(signal.SIGINT, signal_handler)
 
 
 def server():
