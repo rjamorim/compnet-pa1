@@ -26,7 +26,7 @@ except socket.error:
     exit(1)
 
 # Here I validate the server port
-if args.serverPort.isdigit():
+if args.port.isdigit():
     port = int(args.port)
     if port > 65535:
         print "ERROR: The port number is outside the acceptable range! (0-65535)"
@@ -47,21 +47,25 @@ else:
 #         message = sock.recv(BUFSIZE)
 # Thread(target=receive()).start()
 
+
 def serverthread(serversock):
     message = serversock.recv(BUFSIZE)
 
-def server(host, port):
-    server = socket(socket.AF_INET, socket.SOCK_STREAM)     # listen on TCP/IP socket
-    server.bind(("localhost", 2663))                 # serve clients in threads
-    server.listen(5)
+
+def server():
+    clientserv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     # listen on TCP/IP socket
+    clientserv.bind(("localhost", 2663))                 # serve clients in threads
+    clientserv.listen(5)
     while True:
-        serversock, serveraddr = server.accept( )
-        Thread.start_new_thread(serverthread, (serversock,))
+        serversock, serveraddr = clientserv.accept()
+        servthread = Thread(target=serverthread, args=(serversock,))
+        servthread.start()
 
-Thread(target=server).start()
+clientservthread = Thread(target=server, args=())
+clientservthread.start()
 
-client = socket(socket.AF_INET, socket.SOCK_STREAM)     # listen on TCP/IP socket
-client.bind((args.ip, args.port))
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     # listen on TCP/IP socket
+client.connect((args.ip, port))
 while True:
     data = raw_input('> ')
     if not data: break
