@@ -96,7 +96,7 @@ clientservthread.start()
 
 def heartbeat():
     while True:
-        time.sleep(5)
+        time.sleep(45)
         send("LIVE")
 
 
