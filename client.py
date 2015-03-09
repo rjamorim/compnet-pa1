@@ -77,7 +77,7 @@ def send(data):
 
 def serverthread(serversock):
     message = serversock.recv(BUFSIZE)
-    print message
+    print("> " + message + "\n> "),
 
 
 def server():
@@ -88,8 +88,6 @@ def server():
         serversock, serveraddr = clientserv.accept()
         servthread = Thread(target=serverthread, args=(serversock,))
         servthread.start()
-
-
 clientservthread = Thread(target=server)
 clientservthread.start()
 
@@ -98,16 +96,12 @@ def heartbeat():
     while True:
         time.sleep(45)
         send("LIVE")
-
-
 heartbeatthread = Thread(target=heartbeat)
 heartbeatthread.start()
-
 
 while True:
     text = raw_input('> ')
     command = text.split(' ', 1)
-    print command[0]
 
     if command[0] == "message":
         send("MESG " + command[1])
