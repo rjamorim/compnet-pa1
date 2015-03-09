@@ -4,7 +4,6 @@
 
 import argparse
 import socket
-import thread
 from threading import Thread
 
 # Configuration variables
@@ -13,9 +12,7 @@ BUFSIZE = 1024
 
 # Here I take care of the command line arguments
 parser = argparse.ArgumentParser(description='This is the Message Center', add_help=True)
-
 parser.add_argument('--port', dest = 'port', required = True, help='Port to listen for incoming connections')
-
 args = parser.parse_args()
 
 # Here I validate the port
@@ -29,9 +26,38 @@ else:
     exit(1)
 
 
-def serverthread(serversock):
-    message = serversock.recv(BUFSIZE)
-    print message
+def auth(clientsock, message):
+    print "bogus"
+
+
+def serverthread(clientsock, clientaddr):
+    receive = clientsock.recv(BUFSIZE)
+    print receive
+    command = receive.split(' ',1)
+    if command[0] == "AUTH":
+        print "bogus"
+        #auth(clientsock, command[1])
+    elif command[0] == "MESG":
+        print "bogus"
+        #message(clientaddr, command[1])
+    elif command[0] == "BCST":
+        print "bogus"
+        #broadcast(clientaddr, command[1])
+    elif command[0] == "ONLN":
+        print "bogus"
+        #online(clientaddr)
+    elif command[0] == "BLCK":
+        print "bogus"
+        #block(clientaddr, command[1])
+    elif command[0] == "UNBL":
+        print "bogus"
+        #unblock(clientaddr, command[1])
+    elif command[0] == "LOGT":
+        print "bogus"
+        #logout(clientaddr)
+    elif command[0] == "GETA":
+        print "bogus"
+        #getaddress(clientaddr, command[1])
 
 
 def server():
@@ -39,10 +65,9 @@ def server():
     serversocket.bind(("localhost", port))                 # serve clients in threads
     serversocket.listen(5)
     while True:
-        serversock, serveraddr = serversocket.accept( )
-        clientthread = Thread(target=serverthread, args=(serversock,))
+        clientsock, clientaddr = serversocket.accept()
+        clientthread = Thread(target=serverthread, args=(clientsock, clientaddr))
         clientthread.start()
-        #thread.start_new_thread(serverthread, (serversock,))
 
 clientservthread = Thread(target=server, args=())
 clientservthread.start()
