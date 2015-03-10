@@ -218,7 +218,7 @@ def broadcast(clientaddr, data):
             addressee = (entry[0], 2663)
             send(addressee, msg)
             count += 1
-    send(clientaddr, "Message delivered to " + count + " online users")
+    send(clientaddr, "Message delivered to " + str(count) + " online users")
 
 
 # Returns the list of online users
