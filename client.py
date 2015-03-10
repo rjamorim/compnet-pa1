@@ -10,6 +10,7 @@ from threading import Thread
 
 # Configuration variables
 BUFSIZE = 1024
+PRIVATE = []
 
 
 # Here I take care of the command line arguments
@@ -37,8 +38,11 @@ else:
 
 ## we have the required info, now let's authenticate with the server
 while True:
-    user = raw_input('Username: ')
-    pwd = raw_input('Password: ')
+    try:
+        user = raw_input('Username: ')
+        pwd = raw_input('Password: ')
+    except KeyboardInterrupt:
+        exit(0)
     message = "AUTH " + user + " " + pwd
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -61,6 +65,20 @@ while True:
         exit(1)
 
 
+def permission(data):
+    print "User " + data + "would like to enter private message (P2P) mode with you. Do you accept? (y/n)"
+    while True:
+        choice = raw_input('(y/n)> ')
+        if choice == "y":
+
+            break
+        elif choice == "n":
+
+            break
+        else:
+            print "You must choose either y or n"
+
+
 def private(data):
     print "Placeholder: " + data
 
@@ -77,8 +95,14 @@ def send(data):
 
 
 def serverthread(serversock):
-    message = serversock.recv(BUFSIZE)
-    print("> " + message + " <\n> "),
+    data = serversock.recv(BUFSIZE)
+    command = data.split(' ', 1)
+    if command[0] == "PRIP":
+        PRIVATE.append(command[1])
+    elif command[0] == "PERM":
+        permission(command[1])
+    else:
+        print("> " + data + " <\n> "),
 
 
 clientserv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -101,6 +125,7 @@ heartbeatthread = Thread(target=heartbeat)
 heartbeatthread.start()
 
 def cleanandexit():
+    print "blah"
     clientserv.close()
     exit(0)
 
@@ -109,7 +134,7 @@ while True:
         text = raw_input('> ')
     except KeyboardInterrupt:
         print "caught interrupt"
-        cleanandexit
+        cleanandexit()
     text = text.lstrip()
     command = text.split(' ', 1)
 
@@ -126,10 +151,14 @@ while True:
     elif command[0] == "logout":
         send("LOGT")
         time.sleep(2)
-        cleanandexit
+        cleanandexit()
     elif command[0] == "getaddress":
         send("GETA " + command[1])
     elif command[0] == "private":
+        for entry in PRIVATE:
+            if entry[0] == command[1]:
+                print "You already have the IP address for that user!"
+                continue
         private(command[1])
     elif not command[0]:
         continue

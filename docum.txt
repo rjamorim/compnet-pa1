@@ -11,7 +11,12 @@ AUOK: Authentication OK
 ANOK: Authentication failure
 ABLK: Authentication blocked
 
+PRIP: message from server containing the private IP requested with getaddress
+PERM: message asking for permission to share IP address with user
+
 BLOCKED: list of [IP,timestamp] pairs
 ONLINE: list of [IP,name,timestamp] lists
 BLACKLIST: list of [name,name] pairs. 1st value is who blocked, 2nd is who got blocked
 OUTBOX: list of [name,message] pairs
+
+PRIVATE: list of [name,ip] pairs for private messaging

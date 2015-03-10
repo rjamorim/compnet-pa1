@@ -236,6 +236,13 @@ def logout(clientaddr):
     send(clientaddr, "You were successfully logged out")
 
 
+def getaddress(clientaddr, data):
+    if not isvaliduser(data):
+        send(clientaddr, "ERROR: the user you are requesting the IP does not exist")
+        return 0
+    ########################
+
+
 def serverthread(clientsock, clientaddr):
     receive = clientsock.recv(BUFSIZE)
     command = receive.split(' ', 1)
@@ -256,25 +263,24 @@ def serverthread(clientsock, clientaddr):
     elif command[0] == "LOGT":
         logout(clientaddr)
     elif command[0] == "GETA":
-        print "bogus"
-        #getaddress(clientaddr, command[1])
+        getaddress(clientaddr, command[1])
 
 
-#def signal_handler(signum, frame):
-#    print("custom interrupt handler called.")
 #signal.signal(signal.SIGINT, signal_handler)
 
 
 def server():
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     # listen on TCP/IP socket
-    serversocket.bind(("localhost", port))                 # serve clients in threads
+    try:
+        serversocket.bind(("localhost", port))                 # serve clients in threads
+    except:
+        print "Can't bind. Maybe port is already in use?"
+        exit(1)
     serversocket.listen(5)
     while True:
         clientsock, clientaddr = serversocket.accept()
         clientthread = Thread(target=serverthread, args=(clientsock, clientaddr))
         clientthread.start()
-clientservthread = Thread(target=server)
-clientservthread.start()
 
 
 # Thread that removes clients that haven't been sending heartbeats from the online list. Runs once every 15s
@@ -285,5 +291,21 @@ def idlecleanup():
             if entry[2] < (time.time() - BLOCK_TIME):
                 ONLINE.pop(ONLINE.index(entry))
                 print "Removed idle client " + entry[1]
-cleanupthread = Thread(target=idlecleanup)
-cleanupthread.start()
+
+
+def main():
+    clientservthread = Thread(target=server)
+    clientservthread.start()
+    cleanupthread = Thread(target=idlecleanup)
+    cleanupthread.start()
+
+
+def handler(signum, frame):
+    print "Signal handler called with signal" + signum
+
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGINT, handler)
+    main()
+    while True:           # added
+        time.sleep(1)
