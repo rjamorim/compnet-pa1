@@ -127,7 +127,10 @@ heartbeatthread.start()
 
 
 def cleanandexit():
+    print "Caught interrupt. Exiting..."
     clientserv.close()
+    # I don't send the logout message to the server when quitting from interrupt because maybe the user
+    # is doing it precisely because the server died
     os._exit(0)
 
 
@@ -135,7 +138,6 @@ while True:
     try:
         text = raw_input('> ')
     except KeyboardInterrupt:
-        print "caught interrupt"
         cleanandexit()
     text = text.lstrip()
     command = text.split(' ', 1)

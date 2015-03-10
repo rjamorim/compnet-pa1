@@ -218,7 +218,10 @@ def broadcast(clientaddr, data):
             addressee = (entry[0], 2663)
             send(addressee, msg)
             count += 1
-    send(clientaddr, "Message delivered to " + str(count) + " online users")
+    # The message the server broadcasts when it is interrupted comes with a specially creafted "invalid" clientaddr
+    # where the port number is -1
+    if clientaddr[1] >= 0:
+        send(clientaddr, "Message delivered to " + str(count) + " online users")
 
 
 # Returns the list of online users
@@ -305,7 +308,7 @@ def main():
 # Signal handler that catches Ctrl-C and closes socket before exiting
 def handler(signum, frame):
     print "Quitting: Signal handler called with signal " + str(signum)
-    broadcast(["none", 1], "Server is going down!")
+    broadcast(["none", -1], "Server is going down!")
     serversocket.close()
     os._exit(0)
 
