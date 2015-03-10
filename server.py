@@ -268,11 +268,10 @@ def serverthread(clientsock, clientaddr):
 
 #signal.signal(signal.SIGINT, signal_handler)
 
-
+serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def server():
-    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)     # listen on TCP/IP socket
     try:
-        serversocket.bind(("localhost", port))                 # serve clients in threads
+        serversocket.bind(("localhost", port))
     except:
         print "Can't bind. Maybe port is already in use?"
         exit(1)
@@ -301,7 +300,9 @@ def main():
 
 
 def handler(signum, frame):
-    print "Signal handler called with signal" + signum
+    print "Quitting: Signal handler called with signal" + str(signum)
+    serversocket.close()
+    exit(0)
 
 
 if __name__ == '__main__':
