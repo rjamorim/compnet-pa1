@@ -35,9 +35,10 @@ if args.port.isdigit():
         exit(1)
 else:
     print "ERROR: The server port must be a number!"
-    exit (1)
+    exit(1)
 
-## we have the required info, now let's authenticate with the server
+
+## We have the required info, now let's authenticate with the server
 while True:
     try:
         user = raw_input('Username: ')
@@ -53,19 +54,18 @@ while True:
         exit(1)
     client.send(message)
     resp = client.recv(BUFSIZE)
+    client.close()
     if resp == "AUOK":
         print "Welcome to simple chat server!"
-        client.close()
         break
     elif resp == "ANOK":
         print "Invalid password. Please try again"
-        client.close()
     elif resp == "ABLK":
         print "Too many authentication failures. You have been blocked. Try again after some time"
-        client.close()
-        exit(1)
+        exit(0)
 
 
+# Function that responds to other clients' request (mediated by the server) for private communication
 def permission(serversock, data):
     print "User " + data + "would like to enter private message (P2P) mode with you. Do you accept? (y/n)"
     while True:
@@ -80,10 +80,12 @@ def permission(serversock, data):
             print "You must choose either y or n"
 
 
+# Function that sends data to other clients in P2P mode
 def private(data):
     print "Placeholder: " + data
 
 
+# Function that sends data to the remote server
 def send(data):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -91,7 +93,7 @@ def send(data):
         client.send(data)
     except:
         print "Error connecting to the remote server. Guess it went offline"
-        exit(1)
+        os._exit(0)
     client.close()
 
 
@@ -101,11 +103,12 @@ def serverthread(serversock):
     if command[0] == "PRIP":
         PRIVATE.append(command[1])
     elif command[0] == "PERM":
-        permission(serversock,command[1])
+        permission(serversock, command[1])
     else:
         print("> " + data + " <\n> "),
 
 
+# Thread that listes for messages from the server or other clients (in P2P mode)
 clientserv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def server():
     clientserv.bind(("localhost", 2663))
@@ -118,6 +121,7 @@ clientservthread = Thread(target=server)
 clientservthread.start()
 
 
+# Thread that sends heartbeats to server every 45s
 def heartbeat():
     while True:
         time.sleep(45)
@@ -126,14 +130,16 @@ heartbeatthread = Thread(target=heartbeat)
 heartbeatthread.start()
 
 
+# Signal handler that catches Ctrl-C and closes socket before exiting
 def cleanandexit():
     print "Caught interrupt. Exiting..."
     clientserv.close()
     # I don't send the logout message to the server when quitting from interrupt because maybe the user
-    # is doing it precisely because the server died
+    # is doing this precisely because the server died
     os._exit(0)
 
 
+# The main program loop
 while True:
     try:
         text = raw_input('> ')
@@ -154,7 +160,7 @@ while True:
         send("UNBL " + command[1])
     elif command[0] == "logout":
         send("LOGT")
-        time.sleep(2)
+        time.sleep(1)
         cleanandexit()
     elif command[0] == "getaddress":
         send("GETA " + command[1])

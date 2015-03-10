@@ -35,12 +35,14 @@ else:
     exit(1)
 
 
-# Converts an IP address into an user name, as long as both are in the ONLINE list
+# Converts an IP address into an user name, as long as the IP is in the ONLINE list
 def iptoname(clientaddr):
+    # A special case: the server uses IP address "none" when building the broadcast message calling quits
+    if clientaddr[0] == "none":
+        return "server"
     for entry in ONLINE:
         if entry[0] == clientaddr[0]:
             return entry[1]
-    return "server"
 
 
 # The opposite
@@ -67,21 +69,22 @@ def isvaliduser(name):
                 return True
         return False
     except IOError:
-        print "Credentials file can not be read! Something is very wrong. Exiting..."
-        exit (1)
+        print "ERROR: Credentials file can not be read! Something is very wrong. Exiting..."
+        os._exit(0)
 
 
 # Here we check the outbox to see of the user that just logged in doesn't have any messages waiting
-def processoutbox(name):
-    addressee = (nametoip(name),2663)
+def processoutbox(data):
+    addressee = (data[0],2663)
     flag = False
     for entry in OUTBOX:
-        if entry[0] == name:
+        if entry[0] == data[1]:
             flag = True
             send(addressee, entry[1])
+    # After sending the messages we delete them from the outbox
     if flag:
         for entry in OUTBOX:
-            if entry[0] == name:
+            if entry[0] == data[1]:
                 OUTBOX.pop(OUTBOX.index(entry))
 
 
@@ -89,18 +92,19 @@ def processoutbox(name):
 # Returns the amount of times it failed logging in the last BLOCK_TIME seconds
 def isblocked(clientaddr):
     count = 0
-    for i in BLOCKED:
-        if i[0] == clientaddr[0]:
+    for entry in BLOCKED:
+        if entry[0] == clientaddr[0]:
             # If the time stored is bigger than (current time minus BLOCK_TIME), that block entry is still valid
-            if i[1] >= (time.time() - BLOCK_TIME):
+            if entry[1] >= (time.time() - BLOCK_TIME):
                 count += 1
             # Since new items in the list are prepended and not appended, we can be sure the first match was the last
             # failed login. If the last failed login happened more than BLOCK_TIME ago, it doesn't matter anymore
             else:
-                BLOCKED.pop(BLOCKED.index(i))
+                BLOCKED.pop(BLOCKED.index(entry))
     return count
 
 
+# The client authentication function
 def auth(clientsock, clientaddr, data):
     values = data.split(' ', 1)
     # First we check if that IP requesting to authenticate is not blocked
@@ -115,10 +119,10 @@ def auth(clientsock, clientaddr, data):
             if entry[0] == values[0]:
                 if entry[1] == values[1]:
                     clientsock.send("AUOK")
-                    ONLINE.append([clientaddr[0],entry[0],int(time.time())])
-                    processoutbox(entry[0])
+                    ONLINE.append([clientaddr[0], entry[0], int(time.time())])
+                    processoutbox([clientaddr[0], entry[0]])
                     return 0
-        # If the code arrived here, means authentication failed
+        # If the code arrived here, means authentication failed.
         if tries < 2:
             clientsock.send("ANOK")
             BLOCKED.insert(0,[clientaddr[0],int(time.time())])
@@ -126,18 +130,22 @@ def auth(clientsock, clientaddr, data):
             clientsock.send("ABLK")
             BLOCKED.insert(0,[clientaddr[0],int(time.time())])
     except IOError:
-        print "Credentials file can not be read! Something is very wrong. Exiting..."
-        exit (1)
+        print "ERROR: Credentials file can not be read! Something is very wrong. Exiting..."
+        os._exit(0)
 
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# The most important function, that sends messages to clients. Treat it with due respect
+clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def send(clientaddr, data):
     try:
-        client.connect((clientaddr[0], 2663))
-        client.send(data)
+        clientsocket.connect((clientaddr[0], 2663))
+        clientsocket.send(data)
     except:
-        print "Error connecting to the remote client. Guess it went offline"
-    client.close()
+        print "Error connecting to the client " + iptoname(clientaddr) + ". Guess it went offline"
+        return False
+    # Connections must NEVER be persistent!
+    clientsocket.close()
+    return True
 
 
 # Refreshes ONLINE list when a client sends a heartbeat
@@ -150,6 +158,7 @@ def heartbeat(clientaddr):
 # Routine for an user to block another user
 def block(clientaddr, data):
     client = iptoname(clientaddr)
+    # Some people just want to watch the world burn
     if client == data:
         send(clientaddr, "ERROR: Are you really trying to block yourself??")
         return 0
@@ -200,9 +209,16 @@ def message(clientaddr, data):
     if isonline(data[0]):
         msg = "MSG FROM " + iptoname(clientaddr) + ": " + data[1]
         addressee = (nametoip(data[0]), 2663)
-        send(addressee, msg)
-        send(clientaddr, "Message successfully sent")
-        print "Sent " + msg
+        result = send(addressee, msg)
+        # And here you have the guaranteed message delivery functionality! Quite simple and sweet
+        if result:
+            send(clientaddr, "Message successfully sent to " + data[0])
+        else:
+            msg = "OFFLINE MSG FROM " + iptoname(clientaddr) + ": " + data[1]
+            OUTBOX.append([data[0], msg])
+            send(clientaddr, "Client " + data[0] + " went offline! Msg stored for delivery when it comes back online")
+            # Since that client is no longer responding, we remove it from the ONLINE list
+            ONLINE.pop(ONLINE.index([p for p in ONLINE if p[0] == addressee and p[1] == data[0]][0]))
     else:
         msg = "OFFLINE MSG FROM " + iptoname(clientaddr) + ": " + data[1]
         OUTBOX.append([data[0], msg])
@@ -212,14 +228,17 @@ def message(clientaddr, data):
 # Sends a broadcast message
 def broadcast(clientaddr, data):
     count = 0
+    sender = iptoname(clientaddr)
     for entry in ONLINE:
+        if entry[0] == clientaddr[0]:
+            continue
         if not isblocking(clientaddr, entry[1]):
-            msg = "BCAST MSG FROM " + iptoname(clientaddr) + ": " + data
+            msg = "BCAST MSG FROM " + sender + ": " + data
             addressee = (entry[0], 2663)
             send(addressee, msg)
             count += 1
-    # The message the server broadcasts when it is interrupted comes with a specially creafted "invalid" clientaddr
-    # where the port number is -1
+    # The message the server broadcasts when it is interrupted comes with a specially crafted "invalid" clientaddr
+    # where the port number is -1. Therefore, in that case, the delivered message is not necessary
     if clientaddr[1] >= 0:
         send(clientaddr, "Message delivered to " + str(count) + " online users")
 
@@ -240,6 +259,7 @@ def logout(clientaddr):
     send(clientaddr, "You were successfully logged out")
 
 
+# Function for when client requests anoter client's IP address for P2P communication
 def getaddress(clientaddr, data):
     if not isvaliduser(data):
         send(clientaddr, "ERROR: the user which you are requesting the IP does not exist")
@@ -279,7 +299,7 @@ def server():
         serversocket.bind(("localhost", port))
     except:
         print "Can't bind. Maybe port is already in use?"
-        exit(1)
+        os._exit(0)
     serversocket.listen(5)
     while True:
         clientsock, clientaddr = serversocket.accept()
@@ -287,17 +307,17 @@ def server():
         clientthread.start()
 
 
-# Thread that removes clients that haven't been sending heartbeats from the online list. Runs once every 15s
+# Thread that removes clients that haven't been sending heartbeats from the online list. Runs once every 5s
 def idlecleanup():
     while True:
-        time.sleep(15)
+        time.sleep(5)
         for entry in ONLINE:
             if entry[2] < (time.time() - BLOCK_TIME):
                 ONLINE.pop(ONLINE.index(entry))
                 print "Removed idle client " + entry[1]
 
 
-# Main function, that starts the helper threads
+# Main function, starts the helper threads
 def main():
     clientservthread = Thread(target=server)
     clientservthread.start()
@@ -305,10 +325,12 @@ def main():
     cleanupthread.start()
 
 
-# Signal handler that catches Ctrl-C and closes socket before exiting
+# Signal handler that catches Ctrl-C and closes sockets before exiting
 def handler(signum, frame):
     print "Quitting: Signal handler called with signal " + str(signum)
+    # We send a specially crafted, impossible "clientaddr" to force the broadcast function to do our bidding
     broadcast(["none", -1], "Server is going down!")
+    clientsocket.close()
     serversocket.close()
     os._exit(0)
 
