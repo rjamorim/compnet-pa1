@@ -6,6 +6,7 @@ import argparse
 import socket
 import time
 import signal
+import os
 from threading import Thread
 
 # Configuration variables
@@ -65,7 +66,7 @@ while True:
         exit(1)
 
 
-def permission(data):
+def permission(serversock, data):
     print "User " + data + "would like to enter private message (P2P) mode with you. Do you accept? (y/n)"
     while True:
         choice = raw_input('(y/n)> ')
@@ -100,7 +101,7 @@ def serverthread(serversock):
     if command[0] == "PRIP":
         PRIVATE.append(command[1])
     elif command[0] == "PERM":
-        permission(command[1])
+        permission(serversock,command[1])
     else:
         print("> " + data + " <\n> "),
 
@@ -124,10 +125,11 @@ def heartbeat():
 heartbeatthread = Thread(target=heartbeat)
 heartbeatthread.start()
 
+
 def cleanandexit():
-    print "blah"
     clientserv.close()
-    exit(0)
+    os._exit(0)
+
 
 while True:
     try:

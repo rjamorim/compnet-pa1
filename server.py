@@ -6,6 +6,7 @@ import argparse
 import socket
 import time
 import signal
+import os
 from threading import Thread
 
 # Configuration variables
@@ -39,7 +40,7 @@ def iptoname(clientaddr):
     for entry in ONLINE:
         if entry[0] == clientaddr[0]:
             return entry[1]
-    return "oops"
+    return "server"
 
 
 # The opposite
@@ -238,7 +239,10 @@ def logout(clientaddr):
 
 def getaddress(clientaddr, data):
     if not isvaliduser(data):
-        send(clientaddr, "ERROR: the user you are requesting the IP does not exist")
+        send(clientaddr, "ERROR: the user which you are requesting the IP does not exist")
+        return 0
+    if isblocking(clientaddr, data[0]):
+        send(clientaddr, "ERROR: the user " + data[0] + " is blocking you")
         return 0
     ########################
 
@@ -266,8 +270,6 @@ def serverthread(clientsock, clientaddr):
         getaddress(clientaddr, command[1])
 
 
-#signal.signal(signal.SIGINT, signal_handler)
-
 serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def server():
     try:
@@ -292,6 +294,7 @@ def idlecleanup():
                 print "Removed idle client " + entry[1]
 
 
+# Main function, that starts the helper threads
 def main():
     clientservthread = Thread(target=server)
     clientservthread.start()
@@ -299,14 +302,17 @@ def main():
     cleanupthread.start()
 
 
+# Signal handler that catches Ctrl-C and closes socket before exiting
 def handler(signum, frame):
-    print "Quitting: Signal handler called with signal" + str(signum)
+    print "Quitting: Signal handler called with signal " + str(signum)
+    broadcast(["none", 1], "Server is going down!")
     serversocket.close()
-    exit(0)
+    os._exit(0)
 
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, handler)
     main()
-    while True:           # added
+    # If I let the main thread finish, it stops listening for signals
+    while True:
         time.sleep(1)
