@@ -95,6 +95,20 @@ def kick(user):
     ONLINE.pop(ONLINE.index([p for p in ONLINE if p[1] == user][0]))
 
 
+# Notifies all other users when a new user logs in
+def presence(clientaddr):
+    name = iptoname(clientaddr)
+    for entry in ONLINE:
+        if entry[0] == clientaddr[0]:
+            continue
+        # Here we invert the isblocking parameters inverted, since in this case the blocker doesn't want to
+        # tell the blocked user he came online
+        if not isblocking(entry[1], name):
+            msg = "BCAST MSG FROM SERVER: client " + name + " is now online"
+            addressee = (entry[0], 2663)
+            send(addressee, msg)
+
+
 # Checks if a client asking to authenticate is blocked.
 # Returns the amount of times it failed logging in the last BLOCK_TIME seconds
 def isblocked(clientaddr):
@@ -134,7 +148,7 @@ def auth(clientsock, clientaddr, data):
                     # We check if the user didn't have offline messages waiting for him
                     processoutbox([clientaddr[0], entry[0]])
                     # Send a broadcast message informing about who just logged in
-                    broadcast([clientaddr[0],-1], "User " + entry[0] + " is now online")
+                    presence(clientaddr)
                     return 0
         # If the code arrived here, means authentication failed.
         if tries < 2:
@@ -202,8 +216,7 @@ def unblock(clientaddr, data):
 
 
 # Checks if the addressee is blocking the sender
-def isblocking(clientaddr, addressee):
-    sender = iptoname(clientaddr)
+def isblocking(sender, addressee):
     for entry in BLACKLIST:
         if entry[0] == addressee:
             if entry[1] == sender:
@@ -217,7 +230,7 @@ def message(clientaddr, data):
     if not isvaliduser(data[0]):
         send(clientaddr, "ERROR: the user you are sending the message to does not exist")
         return 0
-    if isblocking(clientaddr, data[0]):
+    if isblocking(iptoname(clientaddr), data[0]):
         send(clientaddr, "ERROR: the user " + data[0] + " is blocking you")
         return 0
     if isonline(data[0]):
@@ -246,7 +259,7 @@ def broadcast(clientaddr, data):
     for entry in ONLINE:
         if entry[0] == clientaddr[0]:
             continue
-        if not isblocking(clientaddr, entry[1]):
+        if not isblocking(sender, entry[1]):
             msg = "BCAST MSG FROM " + sender + ": " + data
             addressee = (entry[0], 2663)
             send(addressee, msg)
@@ -274,14 +287,31 @@ def logout(clientaddr):
 
 
 # Function for when client requests anoter client's IP address for P2P communication
-def getaddress(clientaddr, data):
-    if not isvaliduser(data):
+def getaddress(clientaddr, name):
+    if not isvaliduser(name):
         send(clientaddr, "ERROR: the user which you are requesting the IP does not exist")
         return 0
-    if isblocking(clientaddr, data[0]):
-        send(clientaddr, "ERROR: the user " + data[0] + " is blocking you")
+    if isblocking(iptoname(clientaddr), name):
+        send(clientaddr, "ERROR: the user " + name + " is blocking you")
         return 0
-    ########################
+    if not isonline(name):
+        send(clientaddr, "ERROR: the user " + name + " is not currently online")
+        return 0
+    clientip = nametoip(name)
+    try:
+        clientsocket.connect((clientip, 2663))
+        clientsocket.send("PERM " + name)
+        resp = clientsocket.recv(BUFSIZE)
+    except:
+        print "Error connecting to the client " + name + ". Guess it went offline"
+        return False
+    if resp == "y":
+        send(clientaddr, "PRIP " + name + " " + clientip)
+    else:
+        send(clientaddr, "NOPE")
+    # Connections must NEVER be persistent!
+    clientsocket.close()
+    return True
 
 
 def serverthread(clientsock, clientaddr):

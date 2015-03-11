@@ -12,7 +12,7 @@ from threading import Thread
 # Configuration variables
 BUFSIZE = 1024
 PRIVATE = []
-
+user = ""
 
 # Here I take care of the command line arguments
 parser = argparse.ArgumentParser(description='This is the messaging client', add_help=True)
@@ -71,30 +71,65 @@ def permission(serversock, data):
     while True:
         choice = raw_input('(y/n)> ')
         if choice == "y":
-
+            serversock.send("IPOK")
             break
         elif choice == "n":
-
+            serversock.send("IPNO")
             break
         else:
             print "You must choose either y or n"
 
 
+# Checks whether the user has the IP address of a client he's trying to contact
+def haveip(name):
+    for entry in PRIVATE:
+        if entry[0] == name:
+            return True
+    return False
+
+
+# Deals with incoming IP addresses for other clients
+def gotprivate(data):
+    data = data.split(' ', 1)
+    PRIVATE.append([data[0],data[1]])
+    print PRIVATE
+    print "> " + data[0] + " shared his IP address with you. You can now message him directly <\n> "
+
+
 # Function that sends data to other clients in P2P mode
 def private(data):
-    print "Placeholder: " + data
+    data = data.split(' ', 1)
+    for entry in PRIVATE:
+        if entry[0] == data[0]:
+            ip = data[1]
+            privsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            try:
+                privsock.connect((ip, 2663))
+                privsock.send("PRIV MSG from " + user + ": " + data)
+            except:
+                print "> Error connecting to the remote client. Please request its IP address again.  <\n> "
+                # And here's a little bit of guaranteed message delivery:
+                print "> Your message wil be sent through the server to be deliveded when the user connects again  <\n> "
+                send("MESG " + data)
+                PRIVATE.pop(PRIVATE.index(entry))
+            privsock.close()
+            return 0
+    else:
+        print "> You must request this user's IP address before contacting him directly <\n> "
+
 
 
 # Function that sends data to the remote server
 def send(data):
-    client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    clientsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        client.connect((args.ip, port))
-        client.send(data)
+        clientsock.connect((args.ip, port))
+        clientsock.send(data)
     except:
         print "Error connecting to the remote server. Guess it went offline"
         os._exit(0)
-    client.close()
+    # Connections must NEVER be persistent!
+    clientsock.close()
 
 
 def serverthread(serversock):
@@ -107,6 +142,10 @@ def serverthread(serversock):
     elif command[0] == "KICK":
         print "> " + command[1] + " <\n> "
         cleanandexit()
+    elif command[0] == "PRIP":
+        gotprivate(command[1])
+    elif command[0] == "NOPE":
+        print "> The client refused to share his IP address with you <\n> "
     else:
         print("> " + data + " <\n> "),
 
