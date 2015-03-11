@@ -88,6 +88,13 @@ def processoutbox(data):
                 OUTBOX.pop(OUTBOX.index(entry))
 
 
+# If an user ID logs in for the second time, the older login gets kicked out
+def kick(user):
+    msg = "KICK You will be logged out because another client logged in with your credentials"
+    send([nametoip(user),2663],msg)
+    ONLINE.pop(ONLINE.index([p for p in ONLINE if p[1] == user][0]))
+
+
 # Checks if a client asking to authenticate is blocked.
 # Returns the amount of times it failed logging in the last BLOCK_TIME seconds
 def isblocked(clientaddr):
@@ -119,8 +126,15 @@ def auth(clientsock, clientaddr, data):
             if entry[0] == values[0]:
                 if entry[1] == values[1]:
                     clientsock.send("AUOK")
+                    # If another user is online with the same credentials, he gets logged out
+                    if isonline(entry[0]):
+                        kick(entry[0])
+                    # The user is added to the online table
                     ONLINE.append([clientaddr[0], entry[0], int(time.time())])
+                    # We check if the user didn't have offline messages waiting for him
                     processoutbox([clientaddr[0], entry[0]])
+                    # Send a broadcast message informing about who just logged in
+                    broadcast([clientaddr[0],-1], "User " + entry[0] + " is now online")
                     return 0
         # If the code arrived here, means authentication failed.
         if tries < 2:

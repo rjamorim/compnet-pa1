@@ -104,6 +104,9 @@ def serverthread(serversock):
         PRIVATE.append(command[1])
     elif command[0] == "PERM":
         permission(serversock, command[1])
+    elif command[0] == "KICK":
+        print "> " + command[1] + " <\n> "
+        cleanandexit()
     else:
         print("> " + data + " <\n> "),
 
@@ -132,7 +135,6 @@ heartbeatthread.start()
 
 # Signal handler that catches Ctrl-C and closes socket before exiting
 def cleanandexit():
-    print "Caught interrupt. Exiting..."
     clientserv.close()
     # I don't send the logout message to the server when quitting from interrupt because maybe the user
     # is doing this precisely because the server died
@@ -144,6 +146,7 @@ while True:
     try:
         text = raw_input('> ')
     except KeyboardInterrupt:
+        print "Caught interrupt. Exiting..."
         cleanandexit()
     text = text.lstrip()
     command = text.split(' ', 1)

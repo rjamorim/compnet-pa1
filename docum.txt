@@ -11,6 +11,7 @@ AUOK: Authentication OK
 ANOK: Authentication failure
 ABLK: Authentication blocked
 
+KICK: message from server forcing an user to log out
 PRIP: message from server containing the private IP requested with getaddress
 PERM: message asking for permission to share IP address with user
 
