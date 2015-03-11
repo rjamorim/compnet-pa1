@@ -153,7 +153,7 @@ def serverthread(serversock):
 # Thread that listes for messages from the server or other clients (in P2P mode)
 clientserv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def server():
-    clientserv.bind(("localhost", 2663))
+    clientserv.bind(("0.0.0.0", 2663))
     clientserv.listen(5)
     while True:
         serversock, serveraddr = clientserv.accept()

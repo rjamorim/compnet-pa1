@@ -340,7 +340,7 @@ def serverthread(clientsock, clientaddr):
 serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def server():
     try:
-        serversocket.bind(("localhost", port))
+        serversocket.bind(("0.0.0.0", port))
     except:
         print "Can't bind. Maybe port is already in use?"
         os._exit(0)
