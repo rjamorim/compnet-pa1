@@ -77,20 +77,19 @@ def haveip(name):
 def gotprivate(data):
     data = data.split(' ', 1)
     PRIVATE.append([data[0],data[1]])
-    print PRIVATE
     print "> " + data[0] + " shared his IP address with you. You can now message him directly <\n> "
 
 
 # Function that sends data to other clients in P2P mode
 def private(data):
-    data = data.split(' ', 1)
+    message = data.split(' ', 1)
     for entry in PRIVATE:
-        if entry[0] == data[0]:
-            ip = data[1]
+        if entry[0] == message[0]:
+            ip = entry[1]
             privsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             try:
                 privsock.connect((ip, 2663))
-                privsock.send("PRIV MSG from " + user + ": " + data)
+                privsock.send("PRIV MSG from " + user + ": " + message[1])
             except:
                 print "> Error connecting to the remote client. Please request its IP address again.  <\n> "
                 # And here's a little bit of guaranteed message delivery:
