@@ -35,7 +35,6 @@ be useful to exchange sensitive information, among other uses.
 
 
 
-
 How to run:
 Server:
 python server.py --port 1234

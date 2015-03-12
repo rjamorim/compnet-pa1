@@ -18,7 +18,6 @@ ONLINE = []  # List of connected clients
 BLACKLIST = []  # List of clients that blocked other clients
 OUTBOX = []  # Messages waiting for their owners to connect, so that they can be delivered
 
-
 # Here I take care of the command line arguments
 parser = argparse.ArgumentParser(description='This is the Message Center', add_help=True)
 parser.add_argument('--port', dest = 'port', required = True, help='Port to listen for incoming connections')
