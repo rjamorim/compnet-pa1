@@ -358,7 +358,7 @@ def idlecleanup():
     while True:
         time.sleep(5)
         for entry in ONLINE:
-            if entry[2] < (time.time() - BLOCK_TIME):
+            if entry[2] < (time.time() - TIMEOUT):
                 ONLINE.pop(ONLINE.index(entry))
                 print "Removed idle client " + entry[1]
 

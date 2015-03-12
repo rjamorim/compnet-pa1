@@ -193,7 +193,7 @@ while True:
     elif not command[0]:
         continue
     else:
-        print "I could not understand the command you gave me. Valid commands are:"
-        print "message, broadcast, online, (un)block, logout, getaddress, private"
+        print "*** I could not understand the command you gave me. Valid commands are: ***"
+        print "*** message, broadcast, online, (un)block, logout, getaddress, private  ***"
 
 
