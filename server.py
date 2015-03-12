@@ -163,8 +163,9 @@ def auth(clientsock, clientaddr, data):
 
 
 # The most important function, that sends messages to clients. Treat it with due respect
-clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 def send(clientaddr, data):
+    clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print ONLINE
     try:
         clientsocket.connect((clientaddr[0], 2663))
         clientsocket.send(data)
@@ -234,6 +235,7 @@ def message(clientaddr, data):
         send(clientaddr, "ERROR: the user " + data[0] + " is blocking you")
         return 0
     if isonline(data[0]):
+	print "IP address here::: " + nametoip(data[0])
         msg = "MSG FROM " + iptoname(clientaddr) + ": " + data[1]
         addressee = (nametoip(data[0]), 2663)
         result = send(addressee, msg)
