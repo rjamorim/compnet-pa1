@@ -79,6 +79,7 @@ def processoutbox(data):
     for entry in OUTBOX:
         if entry[0] == data[1]:
             flag = True
+            time.sleep(1)
             send(addressee, entry[1])
     # After sending the messages we delete them from the outbox
     if flag:

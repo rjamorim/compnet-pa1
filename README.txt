@@ -33,8 +33,30 @@ once the client has it, he can initiate conversation directly with the other cli
 mediation from the server. This type of communication is called Peer to Peer (P2P) and can
 be useful to exchange sensitive information, among other uses.
 
+Another valuable feature is the guaranteed message delivery. With this functionality, if a
+client sends a message to an user that is offline, the server takes care of storing it until
+that user comes online. And it works even in P2P messages: if a message delivery fails, it
+is sent to the server for storage and later delivery.
+
+Broadcast messages are sent when an user logs in and logs out. Also, as an added feature, the
+server itself sends a broadcast message when it gets killed through ctrl-c, informing users
+that it is going down.
+
+Talking about Ctrl-C, both server and client monitor for usage of these keys and exit
+gracefully, closing open sockets and exiting from threads.
+
+Part 1.2 of P2P privacy bonus part has also been implemented: When A requests for B’s IP address,
+the message centre checks B’s blacklist preferences. If B’s blacklist includes A, the message
+centre does not provide B’s IP address to A.
+
+Besides these, several checks are performed throughout the programs, to check, for instance,
+if an user is trying to send a message to a nonexisting user (that is, the user doesn't appear
+in the credentials database) or if an user that just connected is not connected already (that
+is, two clients using the sema credentials). In that case, the older connection is forced to
+disconnect.
 
 
+*******************************
 How to run:
 Server:
 python server.py --port 1234
@@ -45,6 +67,7 @@ python client.py --server 128.59.15.30 --port 1234
 2663 to receive messages from the server and from other clients)
 
 
+*******************************
 These are the message headers of the communication protocol:
 
 Messages sent by the client:
