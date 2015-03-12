@@ -95,7 +95,7 @@ def kick(user):
     ONLINE.pop(ONLINE.index([p for p in ONLINE if p[1] == user][0]))
 
 
-# Notifies all other users when a new user logs in
+# Notifies all other users when an user logs in
 def presence(clientaddr):
     name = iptoname(clientaddr)
     for entry in ONLINE:
@@ -105,6 +105,18 @@ def presence(clientaddr):
         # tell the blocked user he came online
         if not isblocking(entry[1], name):
             msg = "BCAST MSG FROM SERVER: client " + name + " is now online"
+            addressee = (entry[0], 2663)
+            send(addressee, msg)
+
+
+# Notifies all other users when an user logs out
+def absence(clientaddr):
+    name = iptoname(clientaddr)
+    for entry in ONLINE:
+        if entry[0] == clientaddr[0]:
+            continue
+        if not isblocking(entry[1], name):
+            msg = "BCAST MSG FROM SERVER: client " + name + " went offline"
             addressee = (entry[0], 2663)
             send(addressee, msg)
 
@@ -282,6 +294,7 @@ def online(clientaddr):
 
 # User logs out: gets removed from online list
 def logout(clientaddr):
+    absence(clientaddr)
     for entry in ONLINE:
         if entry[0] == clientaddr[0]:
             ONLINE.pop(ONLINE.index(entry))
@@ -290,6 +303,7 @@ def logout(clientaddr):
 
 # Function for when client requests anoter client's IP address for P2P communication
 def getaddress(clientaddr, name):
+    clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if not isvaliduser(name):
         send(clientaddr, "ERROR: the user which you are requesting the IP does not exist")
         return 0
