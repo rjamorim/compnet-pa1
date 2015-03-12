@@ -79,7 +79,7 @@ def processoutbox(data):
     for entry in OUTBOX:
         if entry[0] == data[1]:
             flag = True
-            time.sleep(1)
+            time.sleep(0.3)
             send(addressee, entry[1])
     # After sending the messages we delete them from the outbox
     if flag:
@@ -246,7 +246,6 @@ def message(clientaddr, data):
         send(clientaddr, "ERROR: the user " + data[0] + " is blocking you")
         return 0
     if isonline(data[0]):
-	print "IP address here::: " + nametoip(data[0])
         msg = "MSG FROM " + iptoname(clientaddr) + ": " + data[1]
         addressee = (nametoip(data[0]), 2663)
         result = send(addressee, msg)
