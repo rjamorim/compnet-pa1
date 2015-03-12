@@ -390,7 +390,6 @@ def handler(signum, frame):
     print "Quitting: Signal handler called with signal " + str(signum)
     # We send a specially crafted, impossible "clientaddr" to force the broadcast function to do our bidding
     broadcast(["none", -1], "Server is going down!")
-    clientsocket.close()
     serversocket.close()
     os._exit(0)
 
