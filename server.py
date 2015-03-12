@@ -177,7 +177,6 @@ def auth(clientsock, clientaddr, data):
 # The most important function, that sends messages to clients. Treat it with due respect
 def send(clientaddr, data):
     clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    print ONLINE
     try:
         clientsocket.connect((clientaddr[0], 2663))
         clientsocket.send(data)
