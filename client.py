@@ -65,21 +65,6 @@ while True:
         exit(0)
 
 
-# Function that responds to other clients' request (mediated by the server) for private communication
-def permission(serversock, data):
-    print "User " + data + "would like to enter private message (P2P) mode with you. Do you accept? (y/n)"
-    while True:
-        choice = raw_input('(y/n)> ')
-        if choice == "y":
-            serversock.send("IPOK")
-            break
-        elif choice == "n":
-            serversock.send("IPNO")
-            break
-        else:
-            print "You must choose either y or n"
-
-
 # Checks whether the user has the IP address of a client he's trying to contact
 def haveip(name):
     for entry in PRIVATE:
@@ -135,17 +120,11 @@ def send(data):
 def serverthread(serversock):
     data = serversock.recv(BUFSIZE)
     command = data.split(' ', 1)
-    if command[0] == "PRIP":
-        PRIVATE.append(command[1])
-    elif command[0] == "PERM":
-        permission(serversock, command[1])
-    elif command[0] == "KICK":
+    if command[0] == "KICK":
         print "> " + command[1] + " <\n> "
         cleanandexit()
     elif command[0] == "PRIP":
         gotprivate(command[1])
-    elif command[0] == "NOPE":
-        print "> The client refused to share his IP address with you <\n> "
     else:
         print("> " + data + " <\n> "),
 

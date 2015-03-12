@@ -303,7 +303,6 @@ def logout(clientaddr):
 
 # Function for when client requests anoter client's IP address for P2P communication
 def getaddress(clientaddr, name):
-    clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     if not isvaliduser(name):
         send(clientaddr, "ERROR: the user which you are requesting the IP does not exist")
         return 0
@@ -314,20 +313,7 @@ def getaddress(clientaddr, name):
         send(clientaddr, "ERROR: the user " + name + " is not currently online")
         return 0
     clientip = nametoip(name)
-    try:
-        clientsocket.connect((clientip, 2663))
-        clientsocket.send("PERM " + name)
-        resp = clientsocket.recv(BUFSIZE)
-    except:
-        print "Error connecting to the client " + name + ". Guess it went offline"
-        return False
-    if resp == "y":
-        send(clientaddr, "PRIP " + name + " " + clientip)
-    else:
-        send(clientaddr, "NOPE")
-    # Connections must NEVER be persistent!
-    clientsocket.close()
-    return True
+    send(clientaddr, "PRIP " + name + " " + clientip)
 
 
 def serverthread(clientsock, clientaddr):
